@@ -3,12 +3,12 @@
   hosts: all
   become: true
   tasks:
-    - name: Habilitar el repositorio universe en Ubuntu
+    - name: Habilitar repositorio universe en Ubuntu
       ansible.builtin.command: add-apt-repository universe -y
       changed_when: false
       ignore_errors: true
 
-    - name: Actualizar la lista de paquetes (apt update)
+    - name: Actualizar la lista de paquetes de apt
       ansible.builtin.apt:
         update_cache: yes
 
