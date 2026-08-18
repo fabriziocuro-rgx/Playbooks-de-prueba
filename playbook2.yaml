@@ -1,0 +1,20 @@
+---
+- name: Crear carpeta y archivo de texto en VM2
+  hosts: all
+  tasks:
+    - name: Crear la carpeta 'mis_notas' en la VM2
+      ansible.builtin.file:
+        path: /home/azureuser2/mis_notas
+        state: directory
+        mode: '0755'
+
+    - name: Crear el archivo hola.txt dentro de la carpeta
+      ansible.builtin.copy:
+        content: |
+          =========================================
+          Hola! Este archivo fue generado desde AWX
+          Servidor de origen: VM1
+          Servidor destino: VM2 ({{ inventory_hostname }})
+          =========================================
+        dest: /home/azureuser2/mis_notas/hola.txt
+        mode: '0644'
