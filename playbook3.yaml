@@ -1,0 +1,21 @@
+---
+- name: Configurar Servidor Web Nginx
+  hosts: all
+  become: true
+  tasks:
+    - name: Instalar Nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+        update_cache: yes
+
+    - name: Crear pagina HTML personalizada
+      ansible.builtin.copy:
+        content: "<h1>Servidor configurado exitosamente por AWX en VM2</h1>"
+        dest: /var/www/html/index.html
+
+    - name: Asegurar que Nginx este iniciado y habilitado
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true
