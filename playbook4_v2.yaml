@@ -1,0 +1,33 @@
+---
+- name: Gestion de Pods en K3s desde AWX
+  hosts: localhost
+  connection: local
+  vars:
+    pod_name: "app-prueba"
+    pod_state: "present"
+    container_image: "nginx:alpine"
+    namespace_target: "default"
+
+  tasks:
+    - name: Mensaje de inicio
+      ansible.builtin.debug:
+        msg: "Iniciando accion '{{ pod_state }}' para el Pod '{{ pod_name }}' con la imagen '{{ container_image }}'."
+
+    - name: Gestionar Pod en Kubernetes
+      kubernetes.core.k8s:
+        state: "{{ pod_state }}"
+        validate_certs: false
+        definition:
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: "{{ pod_name }}"
+            namespace: "{{ namespace_target }}"
+            labels:
+              app: "{{ pod_name }}"
+          spec:
+            containers:
+              - name: app-container
+                image: "{{ container_image }}"
+                ports:
+                  - containerPort: 80
