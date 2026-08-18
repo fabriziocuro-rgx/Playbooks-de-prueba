@@ -2,6 +2,7 @@
 - name: Gestion de Pods en K3s desde AWX
   hosts: localhost
   connection: local
+  gather_facts: false
   vars:
     pod_name: "app-prueba"
     pod_state: "present"
@@ -16,6 +17,7 @@
     - name: Gestionar Pod en Kubernetes
       kubernetes.core.k8s:
         state: "{{ pod_state }}"
+        host: "https://kubernetes.default.svc"
         validate_certs: false
         definition:
           apiVersion: v1
