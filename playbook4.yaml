@@ -1,0 +1,37 @@
+---
+- name: Gestion de Pods en K3s desde AWX
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    pod_name: "app-prueba"
+    namespace_target: "default"
+    container_image: "nginx:alpine"
+    pod_state: "present" # Usar 'present' para crear o 'absent' para eliminar
+
+  tasks:
+    - name: Mensaje de inicio
+      ansible.builtin.debug:
+        msg: "Iniciando accion '{{ pod_state }}' para el Pod '{{ pod_name }}' usando la imagen '{{ container_image }}'."
+
+    - name: Gestionar Pod en Kubernetes
+      kubernetes.core.k8s:
+        state: "{{ pod_state }}"
+        definition:
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: "{{ pod_name }}"
+            namespace: "{{ namespace_target }}"
+            labels:
+              app: "{{ pod_name }}"
+          spec:
+            containers:
+              - name: app-container
+                image: "{{ container_image }}"
+                ports:
+                  - containerPort: 80
+
+    - name: Mensaje de confirmacion
+      ansible.builtin.debug:
+        msg: "El Pod '{{ pod_name }}' ha finalizado el proceso exitosamente en estado '{{ pod_state }}'."
