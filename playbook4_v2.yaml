@@ -16,6 +16,9 @@
 
     - name: Gestionar Pod en Kubernetes
       kubernetes.core.k8s:
+        host: "{{ lookup('env', 'K8S_AUTH_HOST') | default('https://kubernetes.default.svc', true) }}"
+        api_key: "{{ lookup('env', 'K8S_AUTH_API_KEY') | default(omit) }}"
+        validate_certs: false
         state: "{{ pod_state }}"
         definition:
           apiVersion: v1
