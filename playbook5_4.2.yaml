@@ -1,0 +1,54 @@
+---
+- name: Gestion y Confirmación de Pods en Kubernetes
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    pod_name: "app-prueba"
+    pod_state: "present"
+    container_image: "nginx:alpine"
+    namespace_target: "default"
+
+  tasks:
+    - name: 1. Aplicar cambios en el Pod
+      kubernetes.core.k8s:
+        validate_certs: false
+        state: "{{ pod_state }}"
+        definition:
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: "{{ pod_name }}"
+            namespace: "{{ namespace_target }}"
+            labels:
+              app: "{{ pod_name }}"
+          spec:
+            containers:
+              - name: app-container
+                image: "{{ container_image }}"
+                ports:
+                  - containerPort: 80
+
+    - name: 2. Consultar información del Pod creado
+      kubernetes.core.k8s_info:
+        validate_certs: false
+        kind: Pod
+        name: "{{ pod_name }}"
+        namespace: "{{ namespace_target }}"
+      register: pod_info
+      when: pod_state == 'present'
+
+    - name: 3. Mensaje de confirmación visual en AWX
+      ansible.builtin.debug:
+        msg:
+          - "========================================="
+          - "           ESTADO DEL DESPLIEGUE         "
+          - "========================================="
+          - "Pod Nombre : {{ pod_info.resources[0].metadata.name }}"
+          - "Namespace  : {{ pod_info.resources[0].metadata.namespace }}"
+          - "Estado     : {{ pod_info.resources[0].status.phase }}"
+          - "IP del Pod : {{ pod_info.resources[0].status.podIP | default('Asignando IP...') }}"
+          - "Nodo       : {{ pod_info.resources[0].spec.nodeName | default('N/A') }}"
+          - "Imagen     : {{ container_image }}"
+          - "========================================="
+      when: pod_state == 'present' and pod_info.resources | length > 0
