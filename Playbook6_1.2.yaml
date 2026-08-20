@@ -1,0 +1,35 @@
+---
+- name: Instalación y Verificación de Python
+  hosts: all
+  become: true
+  gather_facts: yes
+
+  tasks:
+    - name: Habilitar repositorio universe
+      ansible.builtin.apt_repository:
+        repo: "deb http://archive.ubuntu.com/ubuntu {{ ansible_distribution_release }} universe"
+        state: present
+      register: repo_result
+
+    - name: Instalar Python y herramientas
+      ansible.builtin.apt:
+        name: 
+          - python3
+          - python3-pip
+          - python3-venv
+        state: present
+        update_cache: yes
+      register: install_result
+
+    - name: Reporte final en AWX
+      ansible.builtin.debug:
+        msg:
+          - "========================================="
+          - "       RESULTADO DE LA AUTOMATIZACIÓN    "
+          - "========================================="
+          - "Host          : {{ inventory_hostname }}"
+          - "Repositorio   : {{ 'Ya existía' if not repo_result.changed else 'Creado exitosamente' }}"
+          - "Instalación   : {{ 'Python ya estaba instalado' if not install_result.changed else 'Python instalado/actualizado' }}"
+          - "Sistema       : {{ ansible_distribution }} {{ ansible_distribution_version }}"
+          - "========================================="
+      when: install_result is succeeded
