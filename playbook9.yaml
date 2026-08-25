@@ -1,0 +1,21 @@
+---
+- name: Reporte de Pods Agrupados por Namespace
+  hosts: localhost
+  gather_facts: false
+
+  tasks:
+    - name: 1. Consultar todos los Pods del clúster
+      kubernetes.core.k8s_info:
+        kind: Pod
+      register: all_pods
+
+    - name: 2. Mostrar Pods organizados por Namespace
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "Namespace: {{ item.grouper }}"
+          - "=========================================="
+          - "{{ item.list | json_query('[].{Pod: metadata.name, Estado: status.phase, IP: status.podIP}') }}"
+      loop: "{{ all_pods.resources | groupby('metadata.namespace') }}"
+      loop_control:
+        label: "{{ item.grouper }}"
