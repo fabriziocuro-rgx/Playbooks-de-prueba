@@ -1,0 +1,45 @@
+---
+- name: Automatizacion de Creacion de Namespaces en Kubernetes
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    new_namespace: "{{ ns_name | default('entorno-pruebas') }}"
+
+  tasks:
+    - name: 1. Crear el nuevo Namespace en la VM3
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ new_namespace }}"
+            labels:
+              gestionado_por: "AWX"
+
+    - name: 2. Consultar detalles del Namespace creado
+      kubernetes.core.k8s_info:
+        kind: Namespace
+        name: "{{ new_namespace }}"
+      register: ns_info
+
+    - name: 3. Consultar TODOS los namespaces existentes en el clúster
+      kubernetes.core.k8s_info:
+        kind: Namespace
+      register: all_namespaces
+
+    - name: 4. Extraer solo los nombres de los namespaces
+      ansible.builtin.set_fact:
+        lista_ns: "{{ all_namespaces.resources | map(attribute='metadata.name') | list }}"
+
+    - name: 5. Mostrar resumen en la consola de AWX
+      ansible.builtin.debug:
+        msg:
+          - "--- REGISTRO DE NUEVO NAMESPACE ---"
+          - "Nombre del Namespace: {{ new_namespace }}"
+          - "Estado actual: {{ ns_info.resources[0].status.phase }}"
+          - "Fecha de creación: {{ ns_info.resources[0].metadata.creationTimestamp }}"
+          - "--- LISTA DE NAMESPACES EN LA VM3 ---"
+          - "Total encontrados: {{ lista_ns | length }}"
+          - "Namespaces activos: {{ lista_ns }}"
