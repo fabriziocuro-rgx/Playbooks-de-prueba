@@ -13,9 +13,9 @@
       ansible.builtin.debug:
         msg:
           - "=========================================="
-          - "Namespace: {{ item.grouper }}"
+          - "Namespace: {{ item[0] }}"
           - "=========================================="
-          - "{{ item.list | json_query('[].{Pod: metadata.name, Estado: status.phase, IP: status.podIP}') }}"
+          - "{{ item[1] | json_query('[].{Pod: metadata.name, Estado: status.phase, IP: status.podIP}') }}"
       loop: "{{ all_pods.resources | groupby('metadata.namespace') }}"
       loop_control:
-        label: "{{ item.grouper }}"
+        label: "{{ item[0] }}"
