@@ -1,0 +1,26 @@
+---
+- name: Auditoria y Mantenimiento de Recursos en K8s
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    namespace: "{{ target_namespace | default('default') }}"
+
+  tasks:
+    - name: 1. Obtener la lista completa de Pods
+      kubernetes.core.k8s_info:
+        kind: Pod
+        namespace: "{{ namespace }}"
+      register: pod_list
+
+    - name: 2. Filtrar nombres de Pods activos
+      ansible.builtin.set_fact:
+        active_pods: "{{ pod_list.resources | map(attribute='metadata.name') | list }}"
+
+    - name: 3. Reporte de auditoria de infraestructura en AWX
+      ansible.builtin.debug:
+        msg:
+          - "--- AUDITORÍA DE INFRAESTRUCTURA K8S ---"
+          - "Namespace Evaluado: {{ namespace }}"
+          - "Total de Pods Detectados: {{ active_pods | length }}"
+          - "Lista de Pods Activos: {{ active_pods }}"
