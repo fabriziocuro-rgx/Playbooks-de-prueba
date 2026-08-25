@@ -11,11 +11,16 @@
 
     - name: 2. Mostrar Pods organizados por Namespace
       ansible.builtin.debug:
-        msg:
-          - "=========================================="
-          - "Namespace: {{ item[0] }}"
-          - "=========================================="
-          - "{{ item[1] | json_query('[].{Pod: metadata.name, Estado: status.phase, IP: status.podIP}') }}"
+        msg: |
+          ==========================================
+          Namespace: {{ item[0] }}
+          ==========================================
+          {% for pod in item[1] %}
+          Pod:    {{ pod.metadata.name }}
+          Estado: {{ pod.status.phase }}
+          IP:     {{ pod.status.podIP | default('Sin IP') }}
+          ------------------------------------------
+          {% endfor %}
       loop: "{{ all_pods.resources | groupby('metadata.namespace') }}"
       loop_control:
         label: "{{ item[0] }}"
