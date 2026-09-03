@@ -1,0 +1,64 @@
+---
+ 
+- name: Validación CPU y Memoria Linux
+  hosts: "{{ target_host }}"
+  gather_facts: yes
+ 
+  vars:
+    threshold: "{{ threshold | default(85) | float }}"
+ 
+  tasks:
+ 
+    - name: Validar variable target_host
+      fail:
+        msg: "Debe enviar la variable target_host desde el Concentrador."
+      when: target_host is not defined or target_host | trim == ""
+ 
+    - name: Validar que el servidor pertenezca al grupo linux
+      fail:
+        msg: "El servidor {{ inventory_hostname }} no pertenece al grupo linux."
+      when: "'linux' not in group_names"
+ 
+    - name: Obtener memoria Linux
+      shell: |
+        free -m | awk 'NR==2{
+          total=$2;
+          used=$3;
+          percent=(used/total)*100;
+          printf "%.2f", percent
+        }'
+      register: linux_memory
+      changed_when: false
+ 
+    - name: Obtener CPU Linux
+      shell: |
+        top -bn1 | awk -F',' '/Cpu/ {
+          for(i=1;i<=NF;i++){
+            if($i~/id/){
+              gsub(/[^0-9.]/,"",$i);
+              cpu=100-$i;
+              printf "%.2f",cpu
+            }
+          }
+        }'
+      register: linux_cpu
+      changed_when: false
+ 
+    - name: Calcular estado Linux
+      set_fact:
+        estado_cpu: "{{ 'ALERTA' if (linux_cpu.stdout | float) >= threshold else 'OK' }}"
+        estado_mem: "{{ 'ALERTA' if (linux_memory.stdout | float) >= threshold else 'OK' }}"
+ 
+    - name: Resultado Linux
+      debug:
+        msg:
+          - "========================================="
+          - "Servidor   : {{ inventory_hostname }}"
+          - "Sistema    : Linux"
+          - "CPU        : {{ linux_cpu.stdout }} %"
+          - "Memoria    : {{ linux_memory.stdout }} %"
+          - "Threshold  : {{ threshold }} %"
+          - "Estado CPU : {{ estado_cpu }}"
+          - "Estado MEM : {{ estado_mem }}"
+          - "========================================="
+  
