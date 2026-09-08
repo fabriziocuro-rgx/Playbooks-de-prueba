@@ -1,0 +1,68 @@
+---
+- name: Mantenimiento y Limpieza de Disco
+  hosts: "{{ target_host }}"
+  gather_facts: false
+
+  vars:
+    umbral_disco: "{{ max_disk_usage | default(80) | float }}"
+
+  tasks:
+    - name: Consultar uso de espacio inicial en la raíz (/)
+      ansible.builtin.shell: |
+        df -h / | awk 'NR==2 {print $5}' | tr -d '%'
+      register: uso_disco_inicial
+      changed_when: false
+
+    # --- BLOQUE DE LIMPIEZA ---
+    - name: Evaluar y liberar espacio si supera el umbral
+      block:
+        - name: Limpiar caché de paquetes (APT/Debian/Ubuntu)
+          ansible.builtin.apt:
+            autoclean: yes
+            autoremove: yes
+          when: ansible_facts['os_family'] is defined and ansible_facts['os_family'] == 'Debian'
+
+        - name: Vaciar logs antiguos de systemd (Mayores a 3 días)
+          ansible.builtin.command: journalctl --vacuum-time=3d
+          changed_when: true
+
+        - name: Consultar uso de espacio final tras la limpieza
+          ansible.builtin.shell: |
+            df -h / | awk 'NR==2 {print $5}' | tr -d '%'
+          register: uso_disco_final
+          changed_when: false
+
+        - name: Calcular espacio liberado y estado
+          ansible.builtin.set_fact:
+            porcentaje_liberado: "{{ (uso_disco_inicial.stdout | float) - (uso_disco_final.stdout | float) }}"
+            estado_ejecucion: "LIMPIEZA REALIZADA CON ÉXITO"
+            detalles_limpieza:
+              - "Caché de paquetes (APT/Autoremove) vaciada."
+              - "Logs de systemd mayores a 3 días eliminados."
+
+      when: (uso_disco_inicial.stdout | float) >= (umbral_disco | float)
+
+    # --- CASO SIN LIMPIEZA ---
+    - name: Registrar estado si no se requirió intervención
+      ansible.builtin.set_fact:
+        uso_disco_final: "{{ uso_disco_inicial }}"
+        porcentaje_liberado: "0"
+        estado_ejecucion: "OK (No requirió limpieza)"
+        detalles_limpieza:
+          - "El disco no superaba el umbral del {{ umbral_disco }}%."
+      when: (uso_disco_inicial.stdout | float) < (umbral_disco | float)
+
+    # --- CONFIRMACIÓN Y DETALLE DE CAMBIOS ---
+    - name: Detalle de Mantenimiento y Cambios
+      ansible.builtin.debug:
+        msg:
+          - "========================================="
+          - "Servidor          : {{ inventory_hostname }}"
+          - "Estado Final      : {{ estado_ejecucion }}"
+          - "Uso Inicial       : {{ uso_disco_inicial.stdout }} %"
+          - "Uso Post-Limpieza : {{ uso_disco_final.stdout }} %"
+          - "Espacio Liberado  : {{ porcentaje_liberado }} %"
+          - "-----------------------------------------"
+          - "Acciones/Cambios Realizados:"
+          - "{{ detalles_limpieza }}"
+          - "========================================="
