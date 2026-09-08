@@ -5,7 +5,7 @@
   gather_facts: yes
  
   vars:
-    threshold: "{{ threshold | default(85) | float }}"
+    umbral_limit: "{{ threshold | default(85) | float }}"
  
   tasks:
  
@@ -46,8 +46,8 @@
  
     - name: Calcular estado Linux
       set_fact:
-        estado_cpu: "{{ 'ALERTA' if (linux_cpu.stdout | float) >= threshold else 'OK' }}"
-        estado_mem: "{{ 'ALERTA' if (linux_memory.stdout | float) >= threshold else 'OK' }}"
+        estado_cpu: "{{ 'ALERTA' if (linux_cpu.stdout | float) >= umbral_limit else 'OK' }}"
+        estado_mem: "{{ 'ALERTA' if (linux_memory.stdout | float) >= umbral_limit else 'OK' }}"
  
     - name: Resultado Linux
       debug:
@@ -57,7 +57,7 @@
           - "Sistema    : Linux"
           - "CPU        : {{ linux_cpu.stdout }} %"
           - "Memoria    : {{ linux_memory.stdout }} %"
-          - "Threshold  : {{ threshold }} %"
+          - "Threshold  : {{ umbral_limit }} %"
           - "Estado CPU : {{ estado_cpu }}"
           - "Estado MEM : {{ estado_mem }}"
           - "========================================="
