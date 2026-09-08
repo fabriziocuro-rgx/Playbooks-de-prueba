@@ -7,6 +7,16 @@
     umbral_disco: "{{ max_disk_usage | default(80) | float }}"
 
   tasks:
+    - name: Validar variable target_host
+      fail:
+        msg: "Debe enviar la variable target_host desde el Concentrador."
+      when: target_host is not defined or target_host | trim == ""
+ 
+    - name: Validar que el servidor pertenezca al grupo linux
+      fail:
+        msg: "El servidor {{ inventory_hostname }} no pertenece al grupo linux."
+      when: "'linux' not in group_names"
+      
     - name: Consultar uso de espacio inicial en la raíz (/)
       ansible.builtin.shell: |
         df -h / | awk 'NR==2 {print $5}' | tr -d '%'
