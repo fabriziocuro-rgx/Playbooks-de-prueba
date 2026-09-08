@@ -46,8 +46,8 @@
  
     - name: Calcular estado Linux
       set_fact:
-        estado_cpu: "{{ 'ALERTA' if (linux_cpu.stdout | float) >= umbral_limit else 'OK' }}"
-        estado_mem: "{{ 'ALERTA' if (linux_memory.stdout | float) >= umbral_limit else 'OK' }}"
+        estado_cpu: "{{ 'ALERTA' if (linux_cpu.stdout | float) >= (umbral_limit | float) else 'OK' }}"
+        estado_mem: "{{ 'ALERTA' if (linux_memory.stdout | float) >= (umbral_limit | float) else 'OK' }}"
  
     - name: Resultado Linux
       debug:
