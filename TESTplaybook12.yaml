@@ -1,0 +1,63 @@
+---
+- name: Auto-Recuperación de Servicio Crítico
+  hosts: "{{ target_host }}"
+  gather_facts: false
+
+  vars:
+    servicio_target: "{{ service_name | default('nginx') }}"
+
+  tasks:
+    - name: Validar variable target_host
+      ansible.builtin.assert:
+        that:
+          - target_host is defined
+          - target_host | trim != ""
+        fail_msg: "Debe enviar la variable target_host desde AWX."
+
+    - name: Consultar estado actual del servicio systemd
+      ansible.builtin.systemd:
+        name: "{{ servicio_target }}"
+      register: estado_inicial
+
+    # --- BLOQUE DE RECUPERACIÓN (SI ESTÁ CAÍDO) ---
+    - name: Recuperar servicio si no está activo
+      block:
+        - name: Notificar detección de fallo
+          ansible.builtin.debug:
+            msg: "ALERTA: El servicio {{ servicio_target }} se encuentra en estado '{{ estado_inicial.status.ActiveState }}'. Iniciando reinicio..."
+
+        - name: Intentar reiniciar el servicio
+          ansible.builtin.systemd:
+            name: "{{ servicio_target }}"
+            state: restarted
+
+        - name: Re-verificar estado tras la intervención
+          ansible.builtin.systemd:
+            name: "{{ servicio_target }}"
+          register: estado_post
+
+        - name: Evaluar resultado de la recuperación
+          ansible.builtin.set_fact:
+            estado_final: "{{ estado_post.status.ActiveState }}"
+            mensaje_resultado: "{{ 'RECUPERADO EXITOSAMENTE' if estado_post.status.ActiveState == 'active' else 'FALLO AL REINICIAR' }}"
+
+      when: estado_inicial.status.ActiveState != "active"
+
+    # --- CASO SI YA ESTABA OPERATIVO ---
+    - name: Registrar estado sin cambios
+      ansible.builtin.set_fact:
+        estado_final: "{{ estado_inicial.status.ActiveState }}"
+        mensaje_resultado: "{{ 'OPERATIVO (No requirió acción)' }}"
+      when: estado_inicial.status.ActiveState == "active"
+
+    # --- REPORTES Y CONFIRMACIÓN EN AWX ---
+    - name: Resultado de Recuperación de Servicio
+      ansible.builtin.debug:
+        msg:
+          - "========================================="
+          - "Servidor           : {{ inventory_hostname }}"
+          - "Servicio Evaluado  : {{ servicio_target }}"
+          - "Estado Inicial     : {{ estado_inicial.status.ActiveState }}"
+          - "Estado Final       : {{ estado_final }}"
+          - "Resultado          : {{ mensaje_resultado }}"
+          - "========================================="
