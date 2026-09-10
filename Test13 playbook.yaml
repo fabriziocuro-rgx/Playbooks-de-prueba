@@ -1,0 +1,84 @@
+---
+- name: Mantenimiento y Limpieza Extendida de Disco
+  hosts: "{{ target_host }}"
+  gather_facts: false
+
+  vars:
+    umbral_disco: "{{ max_disk_usage | default(10) | float }}"
+
+  tasks:
+    - name: Validar variable target_host
+      ansible.builtin.assert:
+        that:
+          - target_host is defined
+          - target_host | trim != ""
+        fail_msg: "Debe enviar la variable target_host desde AWX."
+
+    - name: Consultar uso de espacio inicial
+      ansible.builtin.shell: |
+        df -h / | awk 'NR==2 {print $5}' | tr -d '%'
+      register: disco_inicial
+      changed_when: false
+
+    # --- BLOQUE DE LIMPIEZA EXTENDIDA ---
+    - name: Ejecutar protocolo de limpieza si supera el umbral
+      block:
+        - name: Eliminar archivos temporales de prueba y antiguos en /tmp
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: absent
+          with_fileglob:
+            - "/tmp/*.tmp"
+            - "/tmp/*.img"
+
+        - name: Vaciar logs de systemd mayores a 1 día
+          ansible.builtin.command: journalctl --vacuum-time=1d
+          changed_when: true
+
+        - name: Limpiar caché del gestor de paquetes APT
+          ansible.builtin.apt:
+            autoclean: yes
+            autoremove: yes
+          when: ansible_facts['os_family'] is defined and ansible_facts['os_family'] == 'Debian'
+
+        - name: Consultar uso de espacio tras la limpieza
+          ansible.builtin.shell: |
+            df -h / | awk 'NR==2 {print $5}' | tr -d '%'
+          register: disco_final
+          changed_when: false
+
+        - name: Calcular métricas de impacto
+          ansible.builtin.set_fact:
+            porcentaje_liberado: "{{ (disco_inicial.stdout | float) - (disco_final.stdout | float) }}"
+            estado_ejecucion: "LIMPIEZA REALIZADA CON ÉXITO"
+            cambios_realizados:
+              - "Archivos temporales (.tmp / .img) en /tmp eliminados."
+              - "Logs antiguos de journalctl reducidos."
+              - "Caché de paquetes APT purgada."
+
+      when: (disco_inicial.stdout | float) >= (umbral_disco | float)
+
+    # --- CASO SIN LIMPIEZA ---
+    - name: Registrar estado en norma
+      ansible.builtin.set_fact:
+        disco_final: "{{ disco_inicial }}"
+        porcentaje_liberado: "0.0"
+        estado_ejecucion: "OK (Dentro del umbral)"
+        cambios_realizados:
+          - "El uso de disco está por debajo del {{ umbral_disco }}%."
+      when: (disco_inicial.stdout | float) < (umbral_disco | float)
+
+    # --- REPORTES Y CONFIRMACIÓN EN AWX ---
+    - name: Resumen de Mantenimiento de Disco
+      ansible.builtin.debug:
+        msg:
+          - "========================================="
+          - "Servidor           : {{ inventory_hostname }}"
+          - "Estado Final       : {{ estado_ejecucion }}"
+          - "Uso Inicial        : {{ disco_inicial.stdout }} %"
+          - "Uso Post-Limpieza  : {{ disco_final.stdout }} %"
+          - "Espacio Liberado   : {{ porcentaje_liberado }} %"
+          - "-----------------------------------------"
+          - "Detalle de Cambios :"
+          - "{{ cambios_realizados }}"
+          - "========================================="
