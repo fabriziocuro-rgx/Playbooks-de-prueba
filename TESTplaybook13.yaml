@@ -2,6 +2,7 @@
 - name: Mantenimiento y Limpieza Extendida de Disco
   hosts: "{{ target_host }}"
   gather_facts: false
+  become: true
 
   vars:
     umbral_disco: "{{ max_disk_usage | default(10) | float }}"
@@ -23,13 +24,18 @@
     # --- BLOQUE DE LIMPIEZA EXTENDIDA ---
     - name: Ejecutar protocolo de limpieza si supera el umbral
       block:
-        - name: Eliminar archivos temporales de prueba y antiguos en /tmp
+        - name: Buscar archivos temporales (.tmp / .img) en /tmp remoto
+          ansible.builtin.find:
+            paths: /tmp
+            patterns: "*.tmp,*.img"
+          register: archivos_remotos
+
+        - name: Eliminar archivos temporales encontrados en la MV3
           ansible.builtin.file:
-            path: "{{ item }}"
+            path: "{{ item.path }}"
             state: absent
-          with_fileglob:
-            - "/tmp/*.tmp"
-            - "/tmp/*.img"
+          loop: "{{ archivos_remotos.files }}"
+          when: archivos_remotos.matched > 0
 
         - name: Vaciar logs de systemd mayores a 1 día
           ansible.builtin.command: journalctl --vacuum-time=1d
@@ -54,7 +60,6 @@
             cambios_realizados:
               - "Archivos temporales (.tmp / .img) en /tmp eliminados."
               - "Logs antiguos de journalctl reducidos."
-              - "Caché de paquetes APT purgada."
 
       when: (disco_inicial.stdout | float) >= (umbral_disco | float)
 
