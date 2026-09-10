@@ -2,6 +2,7 @@
 - name: Auto-Recuperación de Servicio Crítico
   hosts: "{{ target_host }}"
   gather_facts: false
+  become: true
 
   vars:
     servicio_target: "{{ service_name | default('nginx') }}"
