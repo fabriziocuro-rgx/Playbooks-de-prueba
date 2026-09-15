@@ -1,0 +1,128 @@
+---
+- name: Mantenimiento y Limpieza Extendida de Disco
+  hosts: "{{ target_host }}"
+  gather_facts: true
+  become: true
+
+  vars:
+    umbral_disco: "{{ max_disk_usage | default(10) | float }}"
+
+  tasks:
+    - name: Validar variable target_host
+      ansible.builtin.assert:
+        that:
+          - target_host is defined
+          - target_host | trim != ""
+        fail_msg: "Debe enviar la variable target_host desde AWX."
+
+    # --- MEDICIÓN INICIAL (porcentaje + bytes) ---
+    - name: Consultar uso de espacio inicial (porcentaje)
+      ansible.builtin.shell: |
+        df -h / | awk 'NR==2 {print $5}' | tr -d '%'
+      register: disco_inicial
+      changed_when: false
+
+    - name: Consultar uso de espacio inicial (bytes, mayor precisión)
+      ansible.builtin.shell: |
+        df --output=used -B1 / | tail -1 | tr -d ' '
+      register: bytes_inicial
+      changed_when: false
+
+    # --- BLOQUE DE LIMPIEZA EXTENDIDA ---
+    - name: Ejecutar protocolo de limpieza si supera el umbral
+      block:
+        - name: Buscar archivos temporales (.tmp / .img) en /tmp remoto
+          ansible.builtin.find:
+            paths: /tmp
+            patterns: "*.tmp,*.img"
+          register: archivos_remotos
+
+        - name: Eliminar archivos temporales encontrados en la MV
+          ansible.builtin.file:
+            path: "{{ item.path }}"
+            state: absent
+          loop: "{{ archivos_remotos.files }}"
+          when: archivos_remotos.matched > 0
+
+        - name: Buscar logs rotados/comprimidos antiguos en /var/log
+          ansible.builtin.find:
+            paths: /var/log
+            patterns: "*.gz,*.old,*.1"
+            recurse: true
+            age: 7d
+          register: logs_rotados
+
+        - name: Eliminar logs rotados encontrados
+          ansible.builtin.file:
+            path: "{{ item.path }}"
+            state: absent
+          loop: "{{ logs_rotados.files }}"
+          when: logs_rotados.matched > 0
+
+        - name: Vaciar logs de systemd mayores a 1 día
+          ansible.builtin.command: journalctl --vacuum-time=1d
+          register: journal_vacuum
+          changed_when: true
+
+        - name: Limpiar caché del gestor de paquetes APT
+          ansible.builtin.apt:
+            autoclean: true
+            autoremove: true
+          register: apt_cleanup
+          when: ansible_facts['os_family'] is defined and ansible_facts['os_family'] == 'Debian'
+
+        # --- MEDICIÓN POST-LIMPIEZA ---
+        - name: Consultar uso de espacio tras la limpieza (porcentaje)
+          ansible.builtin.shell: |
+            df -h / | awk 'NR==2 {print $5}' | tr -d '%'
+          register: disco_final
+          changed_when: false
+
+        - name: Consultar uso de espacio tras la limpieza (bytes)
+          ansible.builtin.shell: |
+            df --output=used -B1 / | tail -1 | tr -d ' '
+          register: bytes_final
+          changed_when: false
+
+        - name: Calcular métricas de impacto
+          ansible.builtin.set_fact:
+            porcentaje_liberado: "{{ (disco_inicial.stdout | float) - (disco_final.stdout | float) }}"
+            bytes_liberados: "{{ (bytes_inicial.stdout | int) - (bytes_final.stdout | int) }}"
+            mb_liberados: "{{ ((bytes_inicial.stdout | int) - (bytes_final.stdout | int)) / 1024 / 1024 }}"
+            estado_ejecucion: "LIMPIEZA EJECUTADA (ver detalle de bytes liberados)"
+            cambios_realizados:
+              - "Archivos .tmp/.img en /tmp encontrados: {{ archivos_remotos.matched }}"
+              - "Logs rotados/comprimidos en /var/log encontrados: {{ logs_rotados.matched }}"
+              - "journalctl --vacuum-time=1d ejecutado."
+              - "apt autoclean/autoremove ejecutado (si aplica)."
+
+      when: (disco_inicial.stdout | float) >= (umbral_disco | float)
+
+    # --- CASO SIN LIMPIEZA ---
+    - name: Registrar estado en norma
+      ansible.builtin.set_fact:
+        disco_final: "{{ disco_inicial }}"
+        bytes_final: "{{ bytes_inicial }}"
+        porcentaje_liberado: "0.0"
+        bytes_liberados: "0"
+        mb_liberados: "0.0"
+        estado_ejecucion: "OK (Dentro del umbral)"
+        cambios_realizados:
+          - "El uso de disco está por debajo del {{ umbral_disco }}%."
+      when: (disco_inicial.stdout | float) < (umbral_disco | float)
+
+    # --- REPORTES Y CONFIRMACIÓN EN AWX ---
+    - name: Resumen de Mantenimiento de Disco
+      ansible.builtin.debug:
+        msg:
+          - "========================================="
+          - "Servidor              : {{ inventory_hostname }}"
+          - "Estado Final          : {{ estado_ejecucion }}"
+          - "Uso Inicial           : {{ disco_inicial.stdout }} %"
+          - "Uso Post-Limpieza     : {{ disco_final.stdout }} %"
+          - "Espacio Liberado (%)  : {{ porcentaje_liberado }} %"
+          - "Espacio Liberado (MB) : {{ mb_liberados | round(2) }} MB"
+          - "-----------------------------------------"
+          - "Detalle de Cambios :"
+          - "{{ cambios_realizados }}"
+          - "========================================="
