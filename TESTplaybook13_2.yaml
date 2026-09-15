@@ -121,7 +121,7 @@
           - "Uso Inicial           : {{ disco_inicial.stdout }} %"
           - "Uso Post-Limpieza     : {{ disco_final.stdout }} %"
           - "Espacio Liberado (%)  : {{ porcentaje_liberado }} %"
-          - "Espacio Liberado (MB) : {{ mb_liberados | round(2) }} MB"
+          - "Espacio Liberado (MB) : {{ mb_liberados | float | round(2) }} MB"
           - "-----------------------------------------"
           - "Detalle de Cambios :"
           - "{{ cambios_realizados }}"
