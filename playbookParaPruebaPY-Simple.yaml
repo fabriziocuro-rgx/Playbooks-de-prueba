@@ -22,7 +22,7 @@
 
     - name: Fallar si el directorio no existe
       ansible.builtin.fail:
-        msg: "El directorio {{ working_dir }} no existe en {{ inventory_hostname }}"
+        msg: "El directorio {{ working_dir }} no existe"
       when: not (dir_stat.stat.exists and dir_stat.stat.isdir)
 
     # 2. Validar que el archivo .py exista
