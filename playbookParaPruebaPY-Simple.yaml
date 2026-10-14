@@ -1,5 +1,5 @@
 - hosts: "{{ host_objetivo }}"
-  gather_facts: no
+  gather_facts: false
 
   vars:
     working_dir: "/home/azureuser3"
@@ -9,44 +9,45 @@
 
     # 0. Validar que sea un archivo .py
     - name: Validar que sea un archivo .py
-      assert:
-        that: script_name is match('.*\.py$')
+      ansible.builtin.assert:
+        that:
+          - "script_name is match('.*\\.py$')"
         fail_msg: "{{ script_name }} no es un archivo .py"
 
     # 1. Validar que el directorio exista
     - name: Verificar directorio
-      stat:
+      ansible.builtin.stat:
         path: "{{ working_dir }}"
       register: dir_stat
 
     - name: Fallar si el directorio no existe
-      fail:
+      ansible.builtin.fail:
         msg: "El directorio {{ working_dir }} no existe en {{ inventory_hostname }}"
       when: not (dir_stat.stat.exists and dir_stat.stat.isdir)
 
     # 2. Validar que el archivo .py exista
     - name: Verificar archivo .py
-      stat:
+      ansible.builtin.stat:
         path: "{{ working_dir }}/{{ script_name }}"
       register: script_stat
 
     - name: Fallar si el archivo no existe
-      fail:
+      ansible.builtin.fail:
         msg: "No existe {{ working_dir }}/{{ script_name }}"
       when: not (script_stat.stat.exists and script_stat.stat.isreg)
 
     # 3. Ejecutar el script
     - name: Ejecutar el script
-      command: python3 -u {{ script_name | quote }}
+      ansible.builtin.command: "python3 -u {{ script_name | quote }}"
       args:
         chdir: "{{ working_dir }}"
       register: resultado
       failed_when: false      # permite mostrar la salida aunque falle
-      changed_when: false
+      changed_when: resultado.rc == 0
 
     # 4. Mostrar el resultado en AWX
     - name: Mostrar resultado de la ejecución
-      debug:
+      ansible.builtin.debug:
         msg:
           - "Return code: {{ resultado.rc }}"
           - "--- STDOUT ---"
@@ -56,6 +57,6 @@
 
     # 5. Marcar el job como fallido si el script falló
     - name: Fallar si el script terminó con error
-      fail:
+      ansible.builtin.fail:
         msg: "El script terminó con return code {{ resultado.rc }}"
       when: resultado.rc != 0
