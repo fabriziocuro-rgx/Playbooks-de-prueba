@@ -104,5 +104,5 @@
     ###################################################################
     - name: Fallar si el proceso no fue exitoso
       fail:
-        msg: "El script fallo en {{ working_dir }"
+        msg: "El script fallo en {{ working_dir }}"
       when: not result_json.status.success
