@@ -93,14 +93,6 @@
           retries_used: "{{ output.attempts | default(1) | int }}"
 
     ###################################################################
-    # FALLAR EXPLICITAMENTE SI NO FUE EXITOSO
-    ###################################################################
-    - name: Fallar si el proceso no fue exitoso despues de reintentos
-      fail:
-        msg: "El script fallo despues de {{ result_json.retries_used }} intentos en {{ working_dir }}"
-      when: not result_json.status.success
-
-    ###################################################################
     # MOSTRAR RESULTADO FINAL
     ###################################################################
     - name: Mostrar resultado final en JSON
@@ -116,3 +108,11 @@
           - "error={{ '[ERROR]' in (output.stdout | upper) }}"
           - "critical={{ '[CRITICAL]' in (output.stdout | upper) }}"
           - "traceback={{ 'TRACEBACK' in (output.stdout | upper) }}"
+
+    ###################################################################
+    # FALLAR EXPLICITAMENTE SI NO FUE EXITOSO
+    ###################################################################
+    - name: Fallar si el proceso no fue exitoso despues de reintentos
+      fail:
+        msg: "El script fallo despues de {{ result_json.retries_used }} intentos en {{ working_dir }}"
+      when: not result_json.status.success
