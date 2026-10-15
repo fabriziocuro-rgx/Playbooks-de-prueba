@@ -47,7 +47,7 @@
       args:
         executable: /bin/bash
       register: output
-      retries: 3
+      retries: 2
       delay: 30
       until: >
         (
