@@ -8,6 +8,8 @@
     working_dir: "/home/azureuser3"
     log_file: "/home/azureuser3/ejecucion.log"
     script_file: "{{ archivo | default('main.py') }}"
+    arg01: ""
+    arg02: ""
 
   tasks:
   - name: Bloque de ejecución principal
