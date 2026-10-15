@@ -10,54 +10,56 @@
     script_file: "{{ archivo | default('main.py') }}"
 
   tasks:
+  - name: Bloque de ejecución principal
+    block:
 
-    ###################################################################
-    # VALIDAR RUTA DE TRABAJO
-    ###################################################################
-    - name: Validar que la ruta exista
-      stat:
-        path: "{{ working_dir }}"
-      register: ruta_stat
-
-    - name: Fallar si la ruta no existe
-      fail:
-        msg: "La ruta {{ working_dir }} no existe"
-      when: not ruta_stat.stat.exists
-
-    ###################################################################
-    # VALIDAR SCRIPT
-    ###################################################################
-    - name: Validar que archivo.py exista
-      stat:
-        path: "{{ working_dir }}/{{ script_file }}"
-      register: main_stat
-
-    - name: Fallar si archivo.py no existe
-      fail:
-        msg: "No existe {{ working_dir }}/{{ script_file }}"
-      when: not main_stat.stat.exists
-
-    ###################################################################
-    # EJECUCIÓN CON RETRY INTELIGENTE
-    ###################################################################
-    - name: Ejecutar archivo.py con retry inteligente (cooldown 30s)
-      shell: |
-        set -o pipefail
-        cd "{{ working_dir }}"
-        python3 {{ script_file }} {{ arg01 | quote }} {{ arg02 | quote }} 2>&1 | tee -a "{{ log_file }}"
-      args:
-        executable: /bin/bash
-      register: output
-      retries: 2
-      delay: 30
-      until: >
-        (
-          output.rc == 0 and
-          '[WARNING]' not in (output.stdout | upper) and
-          '[ERROR]' not in (output.stdout | upper) and
-          '[CRITICAL]' not in (output.stdout | upper) and
-          'TRACEBACK' not in (output.stdout | upper)
-        )
+      ###################################################################
+      # VALIDAR RUTA DE TRABAJO
+      ###################################################################
+      - name: Validar que la ruta exista
+        stat:
+          path: "{{ working_dir }}"
+        register: ruta_stat
+  
+      - name: Fallar si la ruta no existe
+        fail:
+          msg: "La ruta {{ working_dir }} no existe"
+        when: not ruta_stat.stat.exists
+  
+      ###################################################################
+      # VALIDAR SCRIPT
+      ###################################################################
+      - name: Validar que archivo.py exista
+        stat:
+          path: "{{ working_dir }}/{{ script_file }}"
+        register: main_stat
+  
+      - name: Fallar si archivo.py no existe
+        fail:
+          msg: "No existe {{ working_dir }}/{{ script_file }}"
+        when: not main_stat.stat.exists
+  
+      ###################################################################
+      # EJECUCIÓN CON RETRY INTELIGENTE
+      ###################################################################
+      - name: Ejecutar archivo.py con retry inteligente (cooldown 30s)
+        shell: |
+          set -o pipefail
+          cd "{{ working_dir }}"
+          python3 {{ script_file }} {{ arg01 | quote }} {{ arg02 | quote }} 2>&1 | tee -a "{{ log_file }}"
+        args:
+          executable: /bin/bash
+        register: output
+        retries: 2
+        delay: 30
+        until: >
+          (
+            output.rc == 0 and
+            '[WARNING]' not in (output.stdout | upper) and
+            '[ERROR]' not in (output.stdout | upper) and
+            '[CRITICAL]' not in (output.stdout | upper) and
+            'TRACEBACK' not in (output.stdout | upper)
+          )
     always:
     
       ###################################################################
