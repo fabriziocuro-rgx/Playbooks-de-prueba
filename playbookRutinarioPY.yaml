@@ -60,7 +60,7 @@
           '[CRITICAL]' not in (output.stdout | upper) and
           'TRACEBACK' not in (output.stdout | upper)
         )
-      ignore_errors: true
+      
  
     ###################################################################
     # LOG EN CONSOLA
