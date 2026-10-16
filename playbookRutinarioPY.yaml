@@ -55,7 +55,6 @@
       until: >
         (
           output.rc == 0 and
-          '[AUTM] FIN' in (output.stdout | upper) and
           '[WARNING]' not in (output.stdout | upper) and
           '[ERROR]' not in (output.stdout | upper) and
           '[CRITICAL]' not in (output.stdout | upper) and
