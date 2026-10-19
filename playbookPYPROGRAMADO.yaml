@@ -92,7 +92,7 @@
       shell: |
         set -o pipefail
         cd "{{ working_dir }}"
-        python3 {{ script_file }} {{ arg01 | quote }}2>&1 | tee -a "{{ log_file }}"
+        python3 {{ script_file }} {{ arg01 | quote }} 2>&1 | tee -a "{{ log_file }}"
       args:
         executable: /bin/bash
       register: output
