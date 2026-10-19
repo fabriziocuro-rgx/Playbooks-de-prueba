@@ -54,7 +54,7 @@
       until: >
         (
           output.rc == 0 and
-          '[AUTM] FIN' in (output.stdout | upper) and
+          '[AUTM] FINAL' in (output.stdout | upper) and
           '[WARNING]' not in (output.stdout | upper) and
           '[ERROR]' not in (output.stdout | upper) and
           '[CRITICAL]' not in (output.stdout | upper) and
@@ -85,9 +85,9 @@
             error_detected: "{{ '[ERROR]' in (output.stdout | upper) }}"
             critical_detected: "{{ '[CRITICAL]' in (output.stdout | upper) }}"
             traceback_detected: "{{ 'TRACEBACK' in (output.stdout | upper) }}"
-            autm_fin_detected: "{{ '[AUTM] FIN' in (output.stdout | upper) }}"
+            autm_fin_detected: "{{ '[AUTM] FINAL' in (output.stdout | upper) }}"
             success: "{{ (output.rc == 0)
-                        and ('[AUTM] FIN' in (output.stdout | upper))
+                        and ('[AUTM] FINAL' in (output.stdout | upper))
                         and ('[WARNING]' not in (output.stdout | upper))
                         and ('[ERROR]' not in (output.stdout | upper))
                         and ('[CRITICAL]' not in (output.stdout | upper))
@@ -105,7 +105,7 @@
       debug:
         msg:
           - "rc={{ output.rc }}"
-          - "autm_fin={{ '[AUTM] FIN' in (output.stdout | upper) }}"
+          - "autm_fin={{ '[AUTM] FINAL' in (output.stdout | upper) }}"
           - "warning={{ '[WARNING]' in (output.stdout | upper) }}"
           - "error={{ '[ERROR]' in (output.stdout | upper) }}"
           - "critical={{ '[CRITICAL]' in (output.stdout | upper) }}"
