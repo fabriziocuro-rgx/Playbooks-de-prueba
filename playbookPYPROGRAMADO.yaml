@@ -14,7 +14,7 @@
   tasks:
 
     ###################################################################
-    # VALIDAR HORARIO PERMITIDO (07:00 a 23:00, cada H)
+    # VALIDAR HORARIO PERMITIDO (07:00 a 23:00, cada 30 min)
     ###################################################################
     - name: Obtener hora y minuto actual del host remoto
       command: date +%H:%M
@@ -28,8 +28,8 @@
 
     - name: Definir límites y minuto permitido
       set_fact:
-        hora_inicio: 16
-        hora_fin: 18
+        hora_inicio: 7
+        hora_fin: 23
         minuto_permitido: [00,30]
 
     - name: Definir si está fuera de horario permitido
