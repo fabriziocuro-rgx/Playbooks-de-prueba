@@ -35,10 +35,10 @@
       set_fact:
         fuera_horario: >-
           {{
-            (hora_actual < hora_inicio) or
-            (hora_actual > hora_fin) or
-            (hora_actual == hora_fin and minuto_actual > 0) or
-            (minuto_actual not in minuto_permitido)
+            (hora_actual | int < hora_inicio | int) or
+            (hora_actual | int > hora_fin | int) or
+            (hora_actual | int == hora_fin and minuto_actual | int > 0) or
+            (minuto_actual | int not in minuto_permitido)
           }}
 
     - name: Mostrar validación de horario
