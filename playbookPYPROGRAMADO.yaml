@@ -30,15 +30,16 @@
       set_fact:
         hora_inicio: 7
         hora_fin: 23
-        minuto_permitido: [00,30]
+        minuto_permitido: [0, 30]
 
     - name: Definir si está fuera de horario permitido
       set_fact:
         fuera_horario: >-
           {{
-            ((hora_actual | int) < (hora_inicio | int)) or
-            ((hora_actual | int) > (hora_fin | int)) or
-            ((minuto_actual | int) not in minuto_permitido)
+            (hora_actual < hora_inicio) or
+            (hora_actual > hora_fin) or
+            (hora_actual == hora_fin and minuto_actual > 0) or
+            (minuto_actual not in minuto_permitido)
           }}
 
     - name: Mostrar validación de horario
@@ -47,7 +48,7 @@
           - "Hora actual del host remoto: {{ hora_min_cmd.stdout }}"
           - "Hora actual parseada: {{ hora_actual }}"
           - "Minuto actual parseado: {{ minuto_actual }}"
-          - "Horario permitido: {{ hora_inicio }}:{{ '%02d' | format(minuto_permitido[0] | int) }} a {{ hora_fin }}:{{ '%02d' | format(minuto_permitido[0] | int) }}"
+          - "Horario permitido: {{ hora_inicio }}:00 a {{ hora_fin }}:00"
           - "Fuera de horario: {{ fuera_horario }}"
 
     - name: Log fuera de horario permitido
