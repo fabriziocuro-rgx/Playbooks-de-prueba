@@ -13,53 +13,41 @@
   tasks:
 
     ###################################################################
-    # VALIDAR HORARIO PERMITIDO (07:00 a 23:00, cada 30 min)
+    # VALIDAR HORARIO PERMITIDO (08:00, 12:30, 17:30, 19:30)
     ###################################################################
-    - name: Obtener hora y minuto actual del host remoto
+    - name: Obtener hora actual del host remoto
       command: date +%H:%M
-      register: hora_min_cmd
+      register: hora_cmd
       changed_when: false
 
-    - name: Separar hora y minuto
+    - name: Definir horarios exactos permitidos (Formato 24h)
       set_fact:
-        hora_actual: "{{ hora_min_cmd.stdout.split(':')[0] | int }}"
-        minuto_actual: "{{ hora_min_cmd.stdout.split(':')[1] | int }}"
-
-    - name: Definir límites y minuto permitido
-      set_fact:
-        hora_inicio: 7
-        hora_fin: 23
-        minuto_permitido: [0, 30]
+        horarios_permitidos:
+          - "08:00"
+          - "12:30"
+          - "17:30"
+          - "19:30"
 
     - name: Definir si está fuera de horario permitido
       set_fact:
-        fuera_horario: >-
-          {{
-            (hora_actual < hora_inicio) or
-            (hora_actual > hora_fin) or
-            (hora_actual == hora_fin and minuto_actual > 0) or
-            (minuto_actual not in minuto_permitido)
-          }}
+        fuera_horario: "{{ hora_cmd.stdout not in horarios_permitidos }}"
 
-    - name: Mostrar validación de horario
+    - name: Mostrar hora actual del host remoto
       debug:
         msg:
-          - "Hora actual del host remoto: {{ hora_min_cmd.stdout }}"
-          - "Hora actual parseada: {{ hora_actual }}"
-          - "Minuto actual parseado: {{ minuto_actual }}"
-          - "Horario permitido: {{ hora_inicio }}:00 a {{ hora_fin }}:00"
+          - "Hora actual del host remoto: {{ hora_cmd.stdout }}"
+          - "Horarios permitidos: {{ horarios_permitidos }}"
           - "Fuera de horario: {{ fuera_horario }}"
 
     - name: Log fuera de horario permitido
       debug:
-        msg: "Fuera de horario permitido (hora actual host remoto: {{ hora_min_cmd.stdout }})"
+        msg: "Fuera de horario permitido (hora actual host remoto: {{ hora_cmd.stdout }})"
       when: fuera_horario | bool
 
     - name: Saltar ejecución fuera de horario permitido
       meta: end_play
       when: fuera_horario | bool
 
- 
     ###################################################################
     # VALIDAR RUTA DE TRABAJO
     ###################################################################
@@ -102,6 +90,7 @@
       until: >
         (
           output.rc == 0 and
+          '[AUTM] FIN' in (output.stdout | upper) and
           '[WARNING]' not in (output.stdout | upper) and
           '[ERROR]' not in (output.stdout | upper) and
           '[CRITICAL]' not in (output.stdout | upper) and
@@ -132,7 +121,9 @@
             error_detected: "{{ '[ERROR]' in (output.stdout | upper) }}"
             critical_detected: "{{ '[CRITICAL]' in (output.stdout | upper) }}"
             traceback_detected: "{{ 'TRACEBACK' in (output.stdout | upper) }}"
+            autm_fin_detected: "{{ '[AUTM] FIN' in (output.stdout | upper) }}"
             success: "{{ (output.rc == 0)
+                        and ('[AUTM] FIN' in (output.stdout | upper))
                         and ('[WARNING]' not in (output.stdout | upper))
                         and ('[ERROR]' not in (output.stdout | upper))
                         and ('[CRITICAL]' not in (output.stdout | upper))
@@ -150,6 +141,7 @@
       debug:
         msg:
           - "rc={{ output.rc }}"
+          - "autm_fin={{ '[AUTM] FIN' in (output.stdout | upper) }}"
           - "warning={{ '[WARNING]' in (output.stdout | upper) }}"
           - "error={{ '[ERROR]' in (output.stdout | upper) }}"
           - "critical={{ '[CRITICAL]' in (output.stdout | upper) }}"
