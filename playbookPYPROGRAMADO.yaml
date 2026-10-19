@@ -47,7 +47,6 @@
           - "Hora actual del host remoto: {{ hora_min_cmd.stdout }}"
           - "Hora actual parseada: {{ hora_actual }}"
           - "Minuto actual parseado: {{ minuto_actual }}"
-          - "Horario permitido: {{ hora_inicio }}:00 a {{ hora_fin }}:00"
           - "Fuera de horario: {{ fuera_horario }}"
 
     - name: Log fuera de horario permitido
