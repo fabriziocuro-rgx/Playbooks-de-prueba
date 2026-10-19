@@ -1,0 +1,121 @@
+- hosts: "{{ host_objetivo }}"
+  gather_facts: no
+ 
+  vars:
+    ###################################################################
+    # CONFIGURACIÓN DE RUTAS
+    ###################################################################
+    working_dir: "/home/azureuser3"
+    log_file: "/home/azureuser3/ejecucion.log"
+    script_file: "{{ archivo | default('main.py') }}"
+    arg01: ""
+ 
+  tasks:
+ 
+    ###################################################################
+    # VALIDAR RUTA DE TRABAJO
+    ###################################################################
+    - name: Validar que la ruta exista
+      stat:
+        path: "{{ working_dir }}"
+      register: ruta_stat
+ 
+    - name: Fallar si la ruta no existe
+      fail:
+        msg: "La ruta {{ working_dir }} no existe"
+      when: not ruta_stat.stat.exists
+ 
+    ###################################################################
+    # VALIDAR SCRIPT
+    ###################################################################
+    - name: Validar que archivo.py exista
+      stat:
+        path: "{{ working_dir }}/{{ script_file }}"
+      register: main_stat
+ 
+    - name: Fallar si archivo.py no existe
+      fail:
+        msg: "No existe {{ working_dir }}/{{ script_file }}"
+      when: not main_stat.stat.exists
+ 
+    ###################################################################
+    # EJECUCIÓN CON RETRY INTELIGENTE
+    ###################################################################
+    - name: Ejecutar archivo.py con retry inteligente (cooldown 30s)
+      shell: |
+        set -o pipefail
+        cd "{{ working_dir }}"
+        python3 {{ script_file }} {{ arg01 | quote }} 2>&1 | tee -a "{{ log_file }}"
+      args:
+        executable: /bin/bash
+      register: output
+      retries: 2
+      delay: 30
+      until: >
+        (
+          output.rc == 0 and
+          '[AUTM] FIN' in (output.stdout | upper) and
+          '[WARNING]' not in (output.stdout | upper) and
+          '[ERROR]' not in (output.stdout | upper) and
+          '[CRITICAL]' not in (output.stdout | upper) and
+          'TRACEBACK' not in (output.stdout | upper)
+        )
+      
+ 
+    ###################################################################
+    # LOG EN CONSOLA
+    ###################################################################
+    - name: Mostrar log del script
+      debug:
+        msg: "{{ output.stdout_lines }}"
+ 
+    ###################################################################
+    # ANALISIS DE RESULTADO
+    ###################################################################
+    - name: Construir JSON final del resultado del script
+      set_fact:
+        result_json:
+          timestamp: "{{ lookup('pipe', 'date -u +\"%Y-%m-%dT%H:%M:%SZ\"') }}"
+          ruta: "{{ working_dir }}"
+          stdout: "{{ output.stdout }}"
+          stderr: "{{ output.stderr }}"
+          return_code: "{{ output.rc | int }}"
+          status:
+            warning_detected: "{{ '[WARNING]' in (output.stdout | upper) }}"
+            error_detected: "{{ '[ERROR]' in (output.stdout | upper) }}"
+            critical_detected: "{{ '[CRITICAL]' in (output.stdout | upper) }}"
+            traceback_detected: "{{ 'TRACEBACK' in (output.stdout | upper) }}"
+            autm_fin_detected: "{{ '[AUTM] FIN' in (output.stdout | upper) }}"
+            success: "{{ (output.rc == 0)
+                        and ('[AUTM] FIN' in (output.stdout | upper))
+                        and ('[WARNING]' not in (output.stdout | upper))
+                        and ('[ERROR]' not in (output.stdout | upper))
+                        and ('[CRITICAL]' not in (output.stdout | upper))
+                        and ('TRACEBACK' not in (output.stdout | upper)) }}"
+          retries_used: "{{ output.attempts | default(1) | int }}"
+ 
+    ###################################################################
+    # MOSTRAR RESULTADO FINAL
+    ###################################################################
+    - name: Mostrar resultado final en JSON
+      debug:
+        msg: "{{ result_json | to_nice_json }}"
+ 
+    - name: Mostrar validaciones finales
+      debug:
+        msg:
+          - "rc={{ output.rc }}"
+          - "autm_fin={{ '[AUTM] FIN' in (output.stdout | upper) }}"
+          - "warning={{ '[WARNING]' in (output.stdout | upper) }}"
+          - "error={{ '[ERROR]' in (output.stdout | upper) }}"
+          - "critical={{ '[CRITICAL]' in (output.stdout | upper) }}"
+          - "traceback={{ 'TRACEBACK' in (output.stdout | upper) }}"
+ 
+    ###################################################################
+    # FALLAR EXPLICITAMENTE SI NO FUE EXITOSO
+    ###################################################################
+    - name: Fallar si el proceso no fue exitoso despues de reintentos
+      fail:
+        msg: "El script fallo despues de {{ result_json.retries_used }} intentos en {{ working_dir }}"
+      when: not result_json.status.success
+ 
