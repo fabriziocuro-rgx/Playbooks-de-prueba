@@ -8,7 +8,7 @@
     working_dir: "/home/azureuser3"
     log_file: "/home/azureuser3/ejecucion.log"
     script_file: "{{ archivo | default('main.py') }}"
-    arg01: ""
+    var_file: ""
  
   tasks:
 
@@ -92,7 +92,7 @@
       shell: |
         set -o pipefail
         cd "{{ working_dir }}"
-        python3 {{ script_file }} {{ arg01 | quote }} 2>&1 | tee -a "{{ log_file }}"
+        python3 {{ script_file }} {{ var_file | quote }} 2>&1 | tee -a "{{ log_file }}"
       args:
         executable: /bin/bash
       register: output
