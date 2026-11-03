@@ -10,7 +10,6 @@
     working_dir: "/home/azureuser3"
     log_file: "/home/azureuser3/ejecucion.log"
     script_file: "{{ archivo | default('main.py') }}"
-    var_file: "{{ arg01 | default('') }}"
  
   tasks:
 
@@ -83,7 +82,7 @@
       shell: |
         set -o pipefail
         cd "{{ working_dir }}"
-        python3 {{ script_file }} {{ var_file | quote }} 2>&1 | tee -a "{{ log_file }}"
+        python3 {{ script_file }} {{ arg01 | quote }} 2>&1 | tee -a "{{ log_file }}"
       args:
         executable: /bin/bash
       register: output
@@ -92,7 +91,7 @@
       until: >
         (
           output.rc == 0 and
-          '[AUTM] Final' in (output.stdout | upper) and
+          '[AUTM] FINAL' in (output.stdout | upper) and
           '[WARNING]' not in (output.stdout | upper) and
           '[ERROR]' not in (output.stdout | upper) and
           '[CRITICAL]' not in (output.stdout | upper) and
@@ -123,9 +122,9 @@
             error_detected: "{{ '[ERROR]' in (output.stdout | upper) }}"
             critical_detected: "{{ '[CRITICAL]' in (output.stdout | upper) }}"
             traceback_detected: "{{ 'TRACEBACK' in (output.stdout | upper) }}"
-            autm_fin_detected: "{{ '[AUTM] Final' in (output.stdout | upper) }}"
+            autm_fin_detected: "{{ '[AUTM] FINAL' in (output.stdout | upper) }}"
             success: "{{ (output.rc == 0)
-                        and ('[AUTM] Final' in (output.stdout | upper))
+                        and ('[AUTM] FINAL' in (output.stdout | upper))
                         and ('[WARNING]' not in (output.stdout | upper))
                         and ('[ERROR]' not in (output.stdout | upper))
                         and ('[CRITICAL]' not in (output.stdout | upper))
@@ -143,7 +142,7 @@
       debug:
         msg:
           - "rc={{ output.rc }}"
-          - "autm_fin={{ '[AUTM] Final' in (output.stdout | upper) }}"
+          - "autm_fin={{ '[AUTM] FINAL' in (output.stdout | upper) }}"
           - "warning={{ '[WARNING]' in (output.stdout | upper) }}"
           - "error={{ '[ERROR]' in (output.stdout | upper) }}"
           - "critical={{ '[CRITICAL]' in (output.stdout | upper) }}"
