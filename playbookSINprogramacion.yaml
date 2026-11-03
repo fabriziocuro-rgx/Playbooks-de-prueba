@@ -7,7 +7,7 @@
     ###################################################################
     # CONFIGURACIÓN DE RUTAS -- Cambiar rutas de dir y log
     ###################################################################
-    working_dir: "/home/azureuser3"
+    working_dir: "/home/azureuserFALLO"
     log_file: "/home/azureuser3/ejecucion.log"
     script_file: "{{ archivo | default('main.py') }}"
     var_file: "{{ arg01 | default('') }}"
