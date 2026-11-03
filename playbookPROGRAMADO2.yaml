@@ -10,7 +10,7 @@
     working_dir: "/home/azureuser3"
     log_file: "/home/azureuser3/ejecucion.log"
     script_file: "{{ archivo | default('main.py') }}"
-    var_file: ""
+    var_file: "{{ arg01 | default('') }}"
  
   tasks:
 
