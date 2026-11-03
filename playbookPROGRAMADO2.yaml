@@ -27,7 +27,6 @@
           - "08:00"
           - "12:30"
           - "17:30"
-          - "19:30"
 
     - name: Definir si está fuera de horario permitido
       set_fact:
