@@ -1,9 +1,11 @@
+---
+
 - hosts: "{{ host_objetivo }}"
   gather_facts: no
  
   vars:
     ###################################################################
-    # CONFIGURACIÓN DE RUTAS
+    # CONFIGURACIÓN DE RUTAS -- Cambiar rutas dir y log
     ###################################################################
     working_dir: "/home/azureuser3"
     log_file: "/home/azureuser3/ejecucion.log"
