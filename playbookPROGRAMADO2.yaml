@@ -49,6 +49,7 @@
           - "Hora simulada evaluada: {{ hora_cmd.stdout }}"
           - "Hora actual parseada: {{ hora_actual }}"
           - "Minuto actual parseado: {{ minuto_actual }}"
+          - "Margen de tolerancia aplicado: {{ margen_minutos }} minutos"
           - "Fuera de horario: {{ fuera_horario }}"
 
     - name: Log fuera de horario permitido
