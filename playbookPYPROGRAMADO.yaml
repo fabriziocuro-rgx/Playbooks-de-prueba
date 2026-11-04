@@ -5,7 +5,7 @@
  
   vars:
     ###################################################################
-    # CONFIGURACIÓN DE RUTAS -- Cambiar rutas de dir y log
+    # CONFIGURACIÓN DE RUTAS
     ###################################################################
     working_dir: "/home/azureuser3"
     log_file: "/home/azureuser3/ejecucion.log"
@@ -14,25 +14,12 @@
   tasks:
 
     ###################################################################
-    # VALIDAR HORARIO PERMITIDO (SIMULACIÓN PARA PRUEBAS)
+    # VALIDAR HORARIO PERMITIDO (07:00 a 23:00, con margen de 0 a 4 min)
     ###################################################################
-    - name: Definir hora simulada para pruebas (Cambiar este valor según el escenario)
-      set_fact:
-        # Ejemplos que puedes probar cambiando esta línea:
-        # "07:02" -> Debe pasar (dentro del margen de 4 min)
-        # "07:05" -> Debe bloquearse (fuera del margen)
-        # "07:30" -> Debe pasar (en punto de media hora)
-        # "07:34" -> Debe pasar (dentro del margen)
-        # "07:35" -> Debe bloquearse
-        # "23:03" -> Debe pasar (última hora permitida dentro del margen)
-        # "23:05" -> Debe bloquearse (pasa de las 23:04)
-        # "23:32" -> Debe bloquearse (fuera del rango de hora_fin)
-        hora_min_simulada: "23:04"
-
-    - name: Asignar hora simulada a la variable del sistema
-      set_fact:
-        hora_min_cmd:
-          stdout: "{{ hora_min_simulada }}"
+    - name: Obtener hora y minuto actual del host remoto
+      command: date +%H:%M
+      register: hora_min_cmd
+      changed_when: false
 
     - name: Separar hora y minuto
       set_fact:
@@ -69,7 +56,6 @@
           - "Hora actual del host remoto: {{ hora_min_cmd.stdout }}"
           - "Hora actual parseada: {{ hora_actual }}"
           - "Minuto actual parseado: {{ minuto_actual }}"
-          - "Margen de tolerancia aplicado: {{ margen_minutos }} minutos"
           - "Fuera de horario: {{ fuera_horario }}"
 
     - name: Log fuera de horario permitido
