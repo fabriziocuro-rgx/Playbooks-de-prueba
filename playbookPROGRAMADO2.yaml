@@ -5,7 +5,7 @@
  
   vars:
     ###################################################################
-    # CONFIGURACIÓN DE RUTAS -- Cambiar rutas dir y log
+    # CONFIGURACIÓN DE RUTAS
     ###################################################################
     working_dir: "/home/azureuser3"
     log_file: "/home/azureuser3/ejecucion.log"
@@ -14,34 +14,46 @@
   tasks:
 
     ###################################################################
-    # VALIDAR HORARIO PERMITIDO (08:00, 12:30, 17:30, 19:30)
+    # VALIDAR HORARIOS ESPECÍfICOS (MODO PRUEBAS - HORA SIMULADA)
     ###################################################################
-    - name: Obtener hora actual del host remoto
-      command: date +%H:%M
-      register: hora_cmd
-      changed_when: false
-
-    - name: Definir horarios exactos permitidos (Formato 24h)
+    - name: Definir hora simulada para pruebas
       set_fact:
-        horarios_permitidos:
-          - "08:00"
-          - "12:30"
-          - "17:30"
+        # Cambia este valor para probar: "08:02" (pasa), "08:05" (bloquea), "12:32" (pasa), "17:32" (pasa)
+        hora_min_simulada: "08:02"
+
+    - name: Asignar hora simulada a la variable de ejecución
+      set_fact:
+        hora_cmd:
+          stdout: "{{ hora_min_simulada }}"
+
+    - name: Separar hora y minuto actual
+      set_fact:
+        hora_actual: "{{ hora_cmd.stdout.split(':')[0] | int }}"
+        minuto_actual: "{{ hora_cmd.stdout.split(':')[1] | int }}"
+        margen_minutos: 4
 
     - name: Definir si está fuera de horario permitido
       set_fact:
-        fuera_horario: "{{ hora_cmd.stdout not in horarios_permitidos }}"
+        fuera_horario: >-
+          {{
+            not (
+              (hora_actual | int == 8 and minuto_actual | int >= 0 and minuto_actual | int <= margen_minutos | int) or
+              (hora_actual | int == 12 and minuto_actual | int >= 30 and minuto_actual | int <= (30 + (margen_minutos | int))) or
+              (hora_actual | int == 17 and minuto_actual | int >= 30 and minuto_actual | int <= (30 + (margen_minutos | int)))
+            )
+          }}
 
-    - name: Mostrar hora actual del host remoto
+    - name: Mostrar hora simulada y validación
       debug:
         msg:
-          - "Hora actual del host remoto: {{ hora_cmd.stdout }}"
-          - "Horarios permitidos: {{ horarios_permitidos }}"
+          - "Hora simulada evaluada: {{ hora_cmd.stdout }}"
+          - "Hora actual parseada: {{ hora_actual }}"
+          - "Minuto actual parseado: {{ minuto_actual }}"
           - "Fuera de horario: {{ fuera_horario }}"
 
     - name: Log fuera de horario permitido
       debug:
-        msg: "Fuera de horario permitido (hora actual host remoto: {{ hora_cmd.stdout }})"
+        msg: "Fuera de horario permitido (hora simulada: {{ hora_cmd.stdout }})"
       when: fuera_horario | bool
 
     - name: Saltar ejecución fuera de horario permitido
