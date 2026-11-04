@@ -14,17 +14,12 @@
   tasks:
 
     ###################################################################
-    # VALIDAR HORARIOS ESPECÍfICOS (MODO PRUEBAS - HORA SIMULADA)
+    # VALIDAR HORARIOS ESPECÍFICOS (8:00am - 12:30pm - 17:30pm, con margen de 0 a 4 min)
     ###################################################################
-    - name: Definir hora simulada para pruebas
-      set_fact:
-        # Cambia este valor para probar: "08:02" (pasa), "08:05" (bloquea), "12:32" (pasa), "17:32" (pasa)
-        hora_min_simulada: "12:35"
-
-    - name: Asignar hora simulada a la variable de ejecución
-      set_fact:
-        hora_cmd:
-          stdout: "{{ hora_min_simulada }}"
+    - name: Obtener hora actual del host remoto
+      command: date +%H:%M
+      register: hora_cmd
+      changed_when: false
 
     - name: Separar hora y minuto actual
       set_fact:
@@ -43,18 +38,17 @@
             )
           }}
 
-    - name: Mostrar hora simulada y validación
+    - name: Mostrar hora actual del host remoto y validación
       debug:
         msg:
-          - "Hora simulada evaluada: {{ hora_cmd.stdout }}"
+          - "Hora actual del host remoto: {{ hora_cmd.stdout }}"
           - "Hora actual parseada: {{ hora_actual }}"
           - "Minuto actual parseado: {{ minuto_actual }}"
-          - "Margen de tolerancia aplicado: {{ margen_minutos }} minutos"
           - "Fuera de horario: {{ fuera_horario }}"
 
     - name: Log fuera de horario permitido
       debug:
-        msg: "Fuera de horario permitido (hora simulada: {{ hora_cmd.stdout }})"
+        msg: "Fuera de horario permitido (hora actual host remoto: {{ hora_cmd.stdout }})"
       when: fuera_horario | bool
 
     - name: Saltar ejecución fuera de horario permitido
@@ -167,4 +161,3 @@
       fail:
         msg: "El script fallo despues de {{ result_json.retries_used }} intentos en {{ working_dir }}"
       when: not result_json.status.success
- 
