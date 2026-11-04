@@ -27,7 +27,7 @@
         # "23:03" -> Debe pasar (última hora permitida dentro del margen)
         # "23:05" -> Debe bloquearse (pasa de las 23:04)
         # "23:32" -> Debe bloquearse (fuera del rango de hora_fin)
-        hora_min_simulada: "07:02"
+        hora_min_simulada: "07:04"
 
     - name: Asignar hora simulada a la variable del sistema
       set_fact:
