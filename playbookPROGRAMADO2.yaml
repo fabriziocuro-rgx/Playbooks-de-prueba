@@ -19,7 +19,7 @@
     - name: Definir hora simulada para pruebas
       set_fact:
         # Cambia este valor para probar: "08:02" (pasa), "08:05" (bloquea), "12:32" (pasa), "17:32" (pasa)
-        hora_min_simulada: "17:31"
+        hora_min_simulada: "12:35"
 
     - name: Asignar hora simulada a la variable de ejecución
       set_fact:
