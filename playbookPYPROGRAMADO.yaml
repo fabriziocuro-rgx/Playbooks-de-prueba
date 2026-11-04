@@ -14,23 +14,36 @@
   tasks:
 
     ###################################################################
-    # VALIDAR HORARIO PERMITIDO (07:00 a 23:00, cada 30 min)
+    # VALIDAR HORARIO PERMITIDO (SIMULACIÓN PARA PRUEBAS)
     ###################################################################
-    - name: Obtener hora y minuto actual del host remoto
-      command: date +%H:%M
-      register: hora_min_cmd
-      changed_when: false
+    - name: Definir hora simulada para pruebas (Cambiar este valor según el escenario)
+      set_fact:
+        # Ejemplos que puedes probar cambiando esta línea:
+        # "07:02" -> Debe pasar (dentro del margen de 4 min)
+        # "07:05" -> Debe bloquearse (fuera del margen)
+        # "07:30" -> Debe pasar (en punto de media hora)
+        # "07:34" -> Debe pasar (dentro del margen)
+        # "07:35" -> Debe bloquearse
+        # "23:03" -> Debe pasar (última hora permitida dentro del margen)
+        # "23:05" -> Debe bloquearse (pasa de las 23:04)
+        # "23:32" -> Debe bloquearse (fuera del rango de hora_fin)
+        hora_min_simulada: "07:02"
+
+    - name: Asignar hora simulada a la variable del sistema
+      set_fact:
+        hora_min_cmd:
+          stdout: "{{ hora_min_simulada }}"
 
     - name: Separar hora y minuto
       set_fact:
         hora_actual: "{{ hora_min_cmd.stdout.split(':')[0] | int }}"
         minuto_actual: "{{ hora_min_cmd.stdout.split(':')[1] | int }}"
 
-    - name: Definir límites y minuto permitido
+    - name: Definir límites y márgenes permitidos
       set_fact:
         hora_inicio: 7
         hora_fin: 23
-        minuto_permitido: [0, 30]
+        margen_minutos: 4
 
     - name: Definir si está fuera de horario permitido
       set_fact:
@@ -38,8 +51,16 @@
           {{
             (hora_actual | int < hora_inicio | int) or
             (hora_actual | int > hora_fin | int) or
-            (hora_actual | int == hora_fin and minuto_actual | int > 0) or
-            (minuto_actual | int not in minuto_permitido)
+            (
+              hora_actual | int == hora_fin and 
+              (minuto_actual | int > margen_minutos | int)
+            ) or
+            (
+              not (
+                (minuto_actual | int >= 0 and minuto_actual | int <= margen_minutos | int) or
+                (minuto_actual | int >= 30 and minuto_actual | int <= (30 + (margen_minutos | int)))
+              )
+            )
           }}
 
     - name: Mostrar validación de horario
